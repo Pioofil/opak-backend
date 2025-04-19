@@ -1,21 +1,22 @@
-
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const db = require('knex')({
+const knex = require('knex');
+const path = require('path');
+
+const db = knex({
   client: 'sqlite3',
   connection: {
-    filename: './records.db'
+    filename: path.join(__dirname, 'records.db')
   },
   useNullAsDefault: true
 });
 
 const app = express();
 
-// Uruchamiamy migrację automatycznie
 db.migrate.latest()
-  .then(() => console.log("Migracja wykonana"))
-  .catch(err => console.error("Błąd migracji:", err));
+  .then(() => console.log("✅ Migracja wykonana (Render)"))
+  .catch(err => console.error("❌ Błąd migracji:", err));
 
 app.use(cors());
 app.use(express.json());
@@ -40,5 +41,5 @@ app.post('/api/records', async (req, res) => {
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
-  console.log(`Serwer działa na porcie ${PORT}`);
+  console.log(`🚀 Serwer działa na porcie ${PORT}`);
 });
