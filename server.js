@@ -1,42 +1,69 @@
-
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const knex = require('knex');
-const path = require('path');
-
-const db = knex({
-  client: 'sqlite3',
-  connection: {
-    filename: path.join(__dirname, 'records.db')
-  },
-  useNullAsDefault: true
-});
+const express = require("express");
+const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const sqlite3 = require("sqlite3").verbose();
+const bodyParser = require("body-parser");
 
 const app = express();
+const PORT = process.env.PORT || 3001;
+const SECRET = "opak_secret_token_2024";
 
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
 
-app.get('/api/records', async (req, res) => {
-  try {
-    const records = await db('records').select();
-    res.json(records);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+const db = new sqlite3.Database("./database.db");
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT,
+    shift TEXT,
+    machine TEXT,
+    boxes INTEGER,
+    area REAL,
+    workTime REAL,
+    downtime REAL,
+    reason TEXT
+  )
+`);
+
+function verifyToken(req, res, next) {
+  const token = req.headers["authorization"];
+  if (!token) return res.status(403).json({ error: "Brak tokena" });
+
+  jwt.verify(token, SECRET, (err, decoded) => {
+    if (err) return res.status(401).json({ error: "Nieprawidłowy token" });
+    req.user = decoded;
+    next();
+  });
+}
+
+app.post("/login", (req, res) => {
+  const { password } = req.body;
+  if (password === "opak2024") {
+    const token = jwt.sign({ user: "admin" }, SECRET, { expiresIn: "7d" });
+    res.json({ token });
+  } else {
+    res.status(401).json({ error: "Błędne hasło" });
   }
 });
 
-app.post('/api/records', async (req, res) => {
-  try {
-    await db('records').insert(req.body);
-    res.status(201).json({ message: 'Zapisano dane' });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+app.post("/api/records", verifyToken, (req, res) => {
+  const { date, shift, machine, boxes, area, workTime, downtime, reason } = req.body;
+  const stmt = db.prepare("INSERT INTO records (date, shift, machine, boxes, area, workTime, downtime, reason) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+  stmt.run(date, shift, machine, boxes, area, workTime, downtime, reason, function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ id: this.lastID, ...req.body });
+  });
 });
 
-const PORT = process.env.PORT || 4000;
+app.get("/api/records", verifyToken, (req, res) => {
+  db.all("SELECT * FROM records ORDER BY id DESC", (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
 app.listen(PORT, () => {
-  console.log(`🚀 Serwer działa na porcie ${PORT}`);
+  console.log(`API działa na http://localhost:${PORT}`);
 });
