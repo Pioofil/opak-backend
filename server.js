@@ -11,6 +11,12 @@ const db = require('knex')({
 });
 
 const app = express();
+
+// Uruchamiamy migrację automatycznie
+db.migrate.latest()
+  .then(() => console.log("Migracja wykonana"))
+  .catch(err => console.error("Błąd migracji:", err));
+
 app.use(cors());
 app.use(express.json());
 
