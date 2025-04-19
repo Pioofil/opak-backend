@@ -5,9 +5,6 @@ module.exports = {
     connection: {
       filename: process.env.DATABASE_URL || "./records.db"
     },
-    useNullAsDefault: true,
-    migrations: {
-      directory: "./migrations"
-    }
+    useNullAsDefault: true
   }
 };

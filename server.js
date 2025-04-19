@@ -15,10 +15,6 @@ const db = knex({
 
 const app = express();
 
-db.migrate.latest()
-  .then(() => console.log("✅ Migracja wykonana (Render)"))
-  .catch(err => console.error("❌ Błąd migracji:", err));
-
 app.use(cors());
 app.use(express.json());
 
